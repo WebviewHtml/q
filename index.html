@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موقع شبيه فيسبوك</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+        }
+        .container {
+            width: 80%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        .upload-section input {
+            margin-right: 10px;
+        }
+        .post {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .post img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .like-btn {
+            background-color: #4267B2;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .like-btn.liked {
+            background-color: #3b5998;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-section">
+            <input type="file" id="fileInput">
+            <button onclick="uploadImage()">إضافة صورة</button>
+        </div>
+        <div id="postsContainer"></div>
+    </div>
+
+    <script>
+        // Load images from localStorage on page load
+        window.onload = function() {
+            const postsContainer = document.getElementById('postsContainer');
+            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+            
+            storedPosts.forEach(post => {
+                const img = document.createElement('img');
+                img.src = post.src;
+                
+                const postDiv = document.createElement('div');
+                postDiv.classList.add('post');
+                
+                postDiv.appendChild(img);
+                
+                const likeButton = document.createElement('button');
+                likeButton.classList.add('like-btn');
+                likeButton.textContent = post.liked ? 'أعجبني' : 'لايك';
+                likeButton.classList.toggle('liked', post.liked);
+                
+                likeButton.onclick = function() {
+                    const liked = !likeButton.classList.contains('liked');
+                    likeButton.classList.toggle('liked', liked);
+                    likeButton.textContent = liked ? 'أعجبني' : 'لايك';
+                    
+                    // Update localStorage
+                    updatePostInLocalStorage(post.src, liked);
+                };
+                
+                postDiv.appendChild(likeButton);
+                postsContainer.prepend(postDiv);
+            });
+        };
+
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const postsContainer = document.getElementById('postsContainer');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgSrc = e.target.result;
+                    
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    
+                    const post = document.createElement('div');
+                    post.classList.add('post');
+                    
+                    post.appendChild(img);
+                    
+                    const likeButton = document.createElement('button');
+                    likeButton.classList.add('like-btn');
+                    likeButton.textContent = 'لايك';
+                    
+                    likeButton.onclick = function() {
+                        const liked = !likeButton.classList.contains('liked');
+                        likeButton.classList.toggle('liked', liked);
+                        likeButton.textContent = liked ? 'أعجبني' : 'لايك';
+                        
+                        // Update localStorage
+                        updatePostInLocalStorage(imgSrc, liked);
+                    };
+                    
+                    post.appendChild(likeButton);
+                    postsContainer.prepend(post);
+                    
+                    // Save to localStorage
+                    saveToLocalStorage(imgSrc, false);
+                    
+                    fileInput.value = '';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveToLocalStorage(src, liked) {
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            posts.push({ src, liked });
+            localStorage.setItem('posts', JSON.stringify(posts));
+        }
+
+        function updatePostInLocalStorage(src, liked) {
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const updatedPosts = posts.map(post => post.src === src ? { src, liked } : post);
+            localStorage.setItem('posts', JSON.stringify(updatedPosts));
+        }
+    </script>
+</body>
+</html>
