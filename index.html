@@ -50,6 +50,12 @@
             background-color: #3b5998;
         }
     </style>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <!-- Firebase Storage -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage.js"></script>
+    <!-- Firebase Database -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
 </head>
 <body>
     <div class="container">
@@ -61,92 +67,77 @@
     </div>
 
     <script>
-        // Load images from localStorage on page load
-        window.onload = function() {
-            const postsContainer = document.getElementById('postsContainer');
-            const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
-            
-            storedPosts.forEach(post => {
-                const img = document.createElement('img');
-                img.src = post.src;
-                
-                const postDiv = document.createElement('div');
-                postDiv.classList.add('post');
-                
-                postDiv.appendChild(img);
-                
-                const likeButton = document.createElement('button');
-                likeButton.classList.add('like-btn');
-                likeButton.textContent = post.liked ? 'أعجبني' : 'لايك';
-                likeButton.classList.toggle('liked', post.liked);
-                
-                likeButton.onclick = function() {
-                    const liked = !likeButton.classList.contains('liked');
-                    likeButton.classList.toggle('liked', liked);
-                    likeButton.textContent = liked ? 'أعجبني' : 'لايك';
-                    
-                    // Update localStorage
-                    updatePostInLocalStorage(post.src, liked);
-                };
-                
-                postDiv.appendChild(likeButton);
-                postsContainer.prepend(postDiv);
-            });
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
-        function uploadImage() {
-            const fileInput = document.getElementById('fileInput');
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const database = firebase.database();
+
+        window.onload = function() {
             const postsContainer = document.getElementById('postsContainer');
-            const file = fileInput.files[0];
             
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imgSrc = e.target.result;
+            database.ref('posts').on('value', (snapshot) => {
+                postsContainer.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const post = childSnapshot.val();
                     
                     const img = document.createElement('img');
-                    img.src = imgSrc;
+                    img.src = post.src;
                     
-                    const post = document.createElement('div');
-                    post.classList.add('post');
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post');
                     
-                    post.appendChild(img);
+                    postDiv.appendChild(img);
                     
                     const likeButton = document.createElement('button');
                     likeButton.classList.add('like-btn');
-                    likeButton.textContent = 'لايك';
+                    likeButton.textContent = post.liked ? 'أعجبني' : 'لايك';
+                    likeButton.classList.toggle('liked', post.liked);
                     
                     likeButton.onclick = function() {
                         const liked = !likeButton.classList.contains('liked');
                         likeButton.classList.toggle('liked', liked);
                         likeButton.textContent = liked ? 'أعجبني' : 'لايك';
                         
-                        // Update localStorage
-                        updatePostInLocalStorage(imgSrc, liked);
+                        // Update database
+                        database.ref('posts/' + childSnapshot.key).update({ liked });
                     };
                     
-                    post.appendChild(likeButton);
-                    postsContainer.prepend(post);
-                    
-                    // Save to localStorage
-                    saveToLocalStorage(imgSrc, false);
-                    
-                    fileInput.value = '';
-                }
-                reader.readAsDataURL(file);
+                    postDiv.appendChild(likeButton);
+                    postsContainer.prepend(postDiv);
+                });
+            });
+        };
+
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const storageRef = storage.ref('images/' + file.name);
+                const uploadTask = storageRef.put(file);
+                
+                uploadTask.on('state_changed', null, (error) => {
+                    console.error('Upload failed:', error);
+                }, () => {
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        const newPostRef = database.ref('posts').push();
+                        newPostRef.set({ src: downloadURL, liked: false });
+                    });
+                });
+                
+                fileInput.value = '';
             }
-        }
-
-        function saveToLocalStorage(src, liked) {
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts.push({ src, liked });
-            localStorage.setItem('posts', JSON.stringify(posts));
-        }
-
-        function updatePostInLocalStorage(src, liked) {
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            const updatedPosts = posts.map(post => post.src === src ? { src, liked } : post);
-            localStorage.setItem('posts', JSON.stringify(updatedPosts));
         }
     </script>
 </body>
